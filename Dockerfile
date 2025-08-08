@@ -1,20 +1,32 @@
-# Usa la versión más reciente de Python 3.12
-FROM python:3.12-slim
+# Use an official Python slim image as the base
+FROM python:3.11-slim
 
-# Establece el directorio de trabajo
+# Prevent Python from writing .pyc files to disk
+ENV PYTHONDONTWRITEBYTECODE=1
+# Force stdout and stderr to be unbuffered (useful for logs)
+ENV PYTHONUNBUFFERED=1
+
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copia primero los requisitos para aprovechar la cache
+# Install OS-level dependencies required for building some Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy only requirements.txt first (to leverage Docker build cache)
 COPY requirements.txt .
 
-# Instala dependencias sin caché
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia el resto de la aplicación
+# Copy the rest of the application code into the container
 COPY . .
 
-# Expone el puerto (Flask usa el 5000 por defecto)
-EXPOSE 8000
+# Expose the port Flask will run on
+EXPOSE 5001
 
-# Comando por defecto para correr la app
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command to run the application
+# For development purposes — in production use Gunicorn or another WSGI server
+CMD ["python", "run.py"]
